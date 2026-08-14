@@ -46,7 +46,7 @@ Delivery operations software for businesses that deliver with their own riders �
 4. "End of day, cash collected doesn't match deliveries" — COD reconciliation is manual
 
 ### v1 scope — the five paid modules
-1. **ePOD (dispute killer):** photo + GPS stamp + timestamp on every drop, stored against the order. COD amount captured at handoff.
+1. **ePOD (dispute killer):** photo + GPS stamp + timestamp on every drop, stored against the order. COD amount captured at handoff. **Package QR chain of custody:** per-order QR label (order id + signed token, printable on any thermal printer or shown on-screen), scanned at pickup ("entered rider's custody", GPS + timestamp) and scanned again at drop — the drop scan gates the ePOD flow, binding the physical package to the delivery. The scan proves *presence of the package*, not receipt by the customer. Optional reverse scan (customer scans a code on the rider's screen, proving a second party was present) is an org setting for high-value orders — **off by default**, it adds friction customers won't always tolerate.
 2. **Customer tracking link:** branded live-map page sent by WhatsApp/SMS. Smoothed position, honest "last seen X min ago", live ETA.
 3. **Dispatcher dashboard:** all riders + all orders on one live map. Exception alerts: rider stalled, off-route, offline > N minutes.
 4. **Automated notifications:** assigned → picked up → nearby (geofence) → delivered. WhatsApp primary, SMS (Termii) fallback.
@@ -55,7 +55,7 @@ Delivery operations software for businesses that deliver with their own riders �
 **Rider app:** PWA first (no app-store friction). GPS ping 5–15s while on delivery, offline buffer + auto-sync, battery-sane sampling, per-rider signed token auth on the ingest endpoint.
 
 ### Explicit non-goals (v1)
-Route optimization · multi-depot · rider marketplace · native apps · payments processing · SIMON UI integration. Written down so we don't drift.
+Route optimization · multi-depot · rider marketplace · native apps · payments processing · SIMON UI integration · **multi-leg control tower / carrier-API integrations** (GIG, DHL, freight visibility — a v2 with a clear buyer: build when an importer/distributor is ready to pay, not before). Written down so we don't drift.
 
 ### Pricing (hypothesis — pilot will correct this)
 - Per-rider/month: **₦7,500–₦15,000** local; **$25–$49** Western outbound
@@ -65,6 +65,7 @@ Route optimization · multi-depot · rider marketplace · native apps · payment
 ### SIMON contract (the door frame, not the door)
 - `org_id` on every table from day one; multi-tenant schema identical to SIMON's target shape
 - Emits signed webhooks: `order.assigned`, `order.picked_up`, `order.delivered`, `order.failed`, `cash.collected`
+- Orders will eventually parent multiple legs, each with a `tracking_mode` (`gps` | `carrier_api` | `checkpoint`) — GPS for your own fleet, carrier events for couriers, QR checkpoint scans for legs with no data at all. Schema decisions must not preclude this; build none of it until a paying customer asks.
 - That's the entire integration surface for now. Nothing else built until a paying customer asks.
 
 ### Pilot plan
@@ -242,9 +243,9 @@ Google Maps in /dispatch, Realtime subscription on riders, live markers with smo
 /t/[token] page (validate token server-side, 24h post-delivery expiry), status timeline, live map with freshness honesty, ETA via Maps API. Notifications outbox + cron: WhatsApp templates, Termii fallback, geofence "nearby" trigger in the ingest handler.
 **Accept:** customer link shows live movement; each status transition sends exactly one notification; WhatsApp failure falls back to SMS; nearby fires once at <500m.
 
-### Phase 6 — ePOD + COD
-Camera capture + client compression, Supabase Storage org-scoped upload, POD record (immutable), COD amount capture, POD visible on order detail + customer page after delivery.
-**Accept:** delivered order without POD is impossible via UI; POD record cannot be mutated (policy test); photo ≤500KB.
+### Phase 6 — ePOD + COD + QR chain of custody
+Camera capture + client compression, Supabase Storage org-scoped upload, POD record (immutable), COD amount capture, POD visible on order detail + customer page after delivery. QR chain of custody: QR generation on order create (label printable / on-screen, order id + signed token; backfill for pre-existing orders), pickup scan recorded as a custody event, delivery scan gates the ePOD flow. Reverse-scan org setting (off by default) for high-value orders.
+**Accept:** delivered order without POD is impossible via UI; POD record cannot be mutated (policy test); photo ≤500KB; for QR-enabled orders the ePOD flow will not open without a valid drop scan; pickup + drop scans each write a custody event with GPS + timestamp.
 
 ### Phase 7 — EOD reconciliation + admin
 EOD report: deliveries completed/failed with reasons, COD expected vs collected per rider, CSV export. Riders CRUD, org settings.

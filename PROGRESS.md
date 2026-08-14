@@ -21,6 +21,7 @@ Record anything that deviates from the spec, with the reason. The spec is expect
 
 | Date | Decision | Reason |
 |---|---|---|
+| 2026-08-14 | Spec amended (Gabriel): QR chain of custody added to Phase 6 (pickup scan + drop scan gating ePOD, reverse-scan as opt-in org setting); multi-leg `tracking_mode` (gps/carrier_api/checkpoint) added to the door-frame list; control tower / carrier APIs explicitly a v2 non-goal | Binds the physical package to the delivery — kills "wrong item" and "never delivered" disputes. Checkpoint scans are the tracking method for legs without GPS. |
 | 2026-08-14 | `pods.delivery_id unique` (spec section 3) implemented as partial unique indexes: one root POD per delivery + each POD superseded at most once | Spec contradicts itself — a plain unique on delivery_id would make the "corrections insert superseding row" flow impossible. This keeps immutability AND the correction chain. |
 | 2026-08-14 | RLS helper functions live in a `private` schema, not `public` | Supabase security advisor: SECURITY DEFINER helpers in `public` are callable by anon via the REST RPC API. `private` keeps them usable by policies but off the API. |
 | 2026-08-14 | Cron schedules in vercel.json set to daily (`0 0 * * *`) instead of every minute (spec section 2) | Vercel Hobby plan rejects sub-daily crons. Routes are 501 stubs until Phases 5/8 anyway. Must revert to `* * * * *` (requires Pro) before Phase 5 acceptance — outbox sweep cadence is load-bearing for notifications. |
