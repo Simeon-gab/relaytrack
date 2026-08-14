@@ -570,7 +570,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      assign_rider: {
+        Args: { p_order: string; p_rider: string }
+        Returns: string
+      }
+      transition_order: {
+        Args: {
+          p_order: string
+          p_status: Database["public"]["Enums"]["order_status"]
+          p_reason?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       delivery_event_type:
