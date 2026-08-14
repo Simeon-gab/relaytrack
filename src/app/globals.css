@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens: docs/SPEC.md section 4. Add nothing here without updating the spec.
+   Palette: near-black base, white surfaces, one accent per meaning —
+   green = delivered/success, amber = in-transit/warning, red = failed/exceptions only. */
+:root {
+  --radius: 8px;
+  --color-base: #0a0a0b;
+  --color-success: #16a34a;
+  --color-transit: #d97706;
+  --color-danger: #dc2626;
+}
