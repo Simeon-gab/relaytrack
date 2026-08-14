@@ -4,7 +4,7 @@ Update this at the end of every Claude Code session. Phase definitions and accep
 
 | Phase | Scope | Status | Notes |
 |---|---|---|---|
-| 0 | Scaffold | 🟨 In progress | Build clean, all 4 shells render, Supabase clients + design tokens in. Remaining: Vercel preview deploy (needs `vercel login`) |
+| 0 | Scaffold | ✅ Done (2026-08-14) | Live at https://relaytrack.vercel.app — all 4 shells verified, build clean, Next upgraded to 15.5.23 (CVE backport) |
 | 1 | Schema + auth + RLS | ⬜ Not started | Org-isolation test is the gate |
 | 2 | Orders + dispatch CRUD | ⬜ Not started | |
 | 3 | Rider PWA + location ingest | ⬜ Not started | **Make-or-break phase** — offline buffer + battery test |
