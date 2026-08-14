@@ -5,7 +5,7 @@ Update this at the end of every Claude Code session. Phase definitions and accep
 | Phase | Scope | Status | Notes |
 |---|---|---|---|
 | 0 | Scaffold | ✅ Done (2026-08-14) | Live at https://relaytrack.vercel.app — all 4 shells verified, build clean, Next upgraded to 15.5.23 (CVE backport) |
-| 1 | Schema + auth + RLS | ⬜ Not started | Org-isolation test is the gate |
+| 1 | Schema + auth + RLS | ✅ Done (2026-08-14) | 11 tables + RLS live, org-isolation + rider-isolation tests pass, seed populates demo org. Awaiting Gabriel's confirmation before Phase 2 |
 | 2 | Orders + dispatch CRUD | ⬜ Not started | |
 | 3 | Rider PWA + location ingest | ⬜ Not started | **Make-or-break phase** — offline buffer + battery test |
 | 4 | Dispatcher live map | ⬜ Not started | |
@@ -21,6 +21,8 @@ Record anything that deviates from the spec, with the reason. The spec is expect
 
 | Date | Decision | Reason |
 |---|---|---|
+| 2026-08-14 | `pods.delivery_id unique` (spec section 3) implemented as partial unique indexes: one root POD per delivery + each POD superseded at most once | Spec contradicts itself — a plain unique on delivery_id would make the "corrections insert superseding row" flow impossible. This keeps immutability AND the correction chain. |
+| 2026-08-14 | RLS helper functions live in a `private` schema, not `public` | Supabase security advisor: SECURITY DEFINER helpers in `public` are callable by anon via the REST RPC API. `private` keeps them usable by policies but off the API. |
 | 2026-08-14 | Cron schedules in vercel.json set to daily (`0 0 * * *`) instead of every minute (spec section 2) | Vercel Hobby plan rejects sub-daily crons. Routes are 501 stubs until Phases 5/8 anyway. Must revert to `* * * * *` (requires Pro) before Phase 5 acceptance — outbox sweep cadence is load-bearing for notifications. |
 
 ## Open questions
