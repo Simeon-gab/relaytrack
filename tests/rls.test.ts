@@ -211,6 +211,6 @@ describe("RLS org isolation", () => {
   });
 
   it.todo("expired tracking token is rejected (Phase 5)");
-  it.todo("unsigned location ingest POST is rejected with 401 (Phase 3)");
+  // "unsigned location ingest POST rejected with 401" lives in tests/ingest.test.ts (Phase 3).
   it.todo("replayed webhook timestamp is rejected by the receiver (Phase 8)");
 });

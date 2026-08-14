@@ -7,7 +7,7 @@ Update this at the end of every Claude Code session. Phase definitions and accep
 | 0 | Scaffold | ✅ Done (2026-08-14) | Live at https://relaytrack.vercel.app — all 4 shells verified, build clean, Next upgraded to 15.5.23 (CVE backport) |
 | 1 | Schema + auth + RLS | ✅ Done (2026-08-14) | 11 tables + RLS live, org-isolation + rider-isolation tests pass, seed populates demo org. Awaiting Gabriel's confirmation before Phase 2 |
 | 2 | Orders + dispatch CRUD | ✅ Done (2026-08-14) | Full lifecycle verified via UI + DB audit trail. Transitions are atomic Postgres functions (SECURITY INVOKER). Awaiting Gabriel's confirmation before Phase 3 |
-| 3 | Rider PWA + location ingest | ⬜ Not started | **Make-or-break phase** — offline buffer + battery test |
+| 3 | Rider PWA + location ingest | 🟨 Code complete (2026-08-14) | Auth/validation/storage tests pass; rider lifecycle verified with actor=rider. **Field tests pending on a real phone** — see docs/phase3-field-tests.md (airplane-mode zero-loss + 1hr battery) |
 | 4 | Dispatcher live map | ⬜ Not started | |
 | 5 | Tracking page + notifications | ⬜ Not started | |
 | 6 | ePOD + COD | ⬜ Not started | |
