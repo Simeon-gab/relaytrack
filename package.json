@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:rls": "vitest run tests/rls.test.ts",
-    "seed": "tsx supabase/seed/seed.ts"
+    "seed": "tsx supabase/seed/seed.ts",
+    "simulate": "tsx scripts/simulate-riders.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
@@ -19,6 +20,7 @@
     "date-fns": "^4.1.0",
     "idb": "^8.0.0",
     "jose": "^5.9.0",
+    "maplibre-gl": "^6.3.0",
     "next": "^15.5.23",
     "react": "19.0.0",
     "react-dom": "19.0.0",

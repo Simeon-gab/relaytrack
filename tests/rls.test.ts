@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type RealtimeChannel,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
 import type { Database } from "../src/types/database";
 
@@ -209,6 +213,68 @@ describe("RLS org isolation", () => {
     const { data: ownDeliveries } = await asRiderA1.from("deliveries").select("id, rider_id");
     expect(ownDeliveries).toEqual([{ id: ctx.deliveryA, rider_id: ctx.riderA1 }]);
   });
+
+  it("realtime rider changes never reach another org (Phase 4)", async () => {
+    // Phase 4 broadcasts `riders` over Realtime for the dispatch map. The
+    // publication is global, so isolation rests entirely on RLS being applied
+    // per subscriber — prove it on the wire, not just at query time.
+    const asOwnerA = await signIn("owner-a");
+    const asOwnerB = await signIn("owner-b");
+    for (const client of [asOwnerA, asOwnerB]) {
+      const { data } = await client.auth.getSession();
+      if (data.session) await client.realtime.setAuth(data.session.access_token);
+    }
+
+    const subscribed = (channel: RealtimeChannel): Promise<void> =>
+      new Promise((resolve, reject) => {
+        channel.subscribe((status) => {
+          if (status === "SUBSCRIBED") resolve();
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+            reject(new Error(`Realtime subscribe failed: ${status}`));
+        });
+      });
+
+    const eventsA: unknown[] = [];
+    const eventsB: unknown[] = [];
+    const listen = (client: SupabaseClient<Database>, name: string, sink: unknown[]) =>
+      client.channel(name).on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "riders" },
+        (payload) => sink.push(payload),
+      );
+    const chanA = listen(asOwnerA, `rls-rt-a-${runId}`, eventsA);
+    const chanB = listen(asOwnerB, `rls-rt-b-${runId}`, eventsB);
+
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    try {
+      await Promise.all([subscribed(chanA), subscribed(chanB)]);
+      // SUBSCRIBED confirms the channel join; the postgres_changes binding
+      // registers a beat later. Settle, then poke until the positive control
+      // hears something — first fan-out on a fresh subscription can be slow.
+      await sleep(3_000);
+      for (let attempt = 0; attempt < 10 && eventsA.length === 0; attempt++) {
+        // Simulate a ping landing: the ingest handler updates last_position.
+        const { error } = await admin
+          .from("riders")
+          .update({
+            last_position: { lat: 6.43, lng: 3.42, accuracy: 10, at: new Date().toISOString() },
+          })
+          .eq("id", ctx.riderA1);
+        expect(error).toBeNull();
+        await sleep(3_000);
+      }
+
+      // Both directions: org A hears its rider (positive control — without
+      // this, an empty eventsB would also pass on a dead channel), org B
+      // hears nothing despite identical subscriptions.
+      expect(eventsA.length).toBeGreaterThan(0);
+      await sleep(5_000);
+      expect(eventsB).toEqual([]);
+    } finally {
+      await asOwnerA.removeChannel(chanA);
+      await asOwnerB.removeChannel(chanB);
+    }
+  }, 60_000);
 
   it.todo("expired tracking token is rejected (Phase 5)");
   // "unsigned location ingest POST rejected with 401" lives in tests/ingest.test.ts (Phase 3).

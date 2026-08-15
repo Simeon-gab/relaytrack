@@ -1,3 +1,5 @@
+@import "maplibre-gl/dist/maplibre-gl.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,4 +13,52 @@
   --color-success: #16a34a;
   --color-transit: #d97706;
   --color-danger: #dc2626;
+}
+
+/* Dispatch map markers (MapLibre custom DOM elements). MapLibre positions
+   the outer element via inline transform, so all styling lives on children
+   or pseudo-elements. */
+.rt-rider {
+  position: relative;
+  width: 16px;
+  height: 16px;
+}
+.rt-rider-dot {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid #0a0a0b;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.15);
+}
+.rt-rider-label {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 500;
+  color: #e5e5e5;
+  white-space: nowrap;
+  text-shadow:
+    0 1px 2px #0a0a0b,
+    0 0 4px #0a0a0b;
+}
+.rt-rider.rt-stale .rt-rider-dot {
+  opacity: 0.45;
+}
+.rt-rider.rt-stale .rt-rider-label {
+  color: #8b8b90;
+}
+.rt-order-pin {
+  position: relative;
+  width: 14px;
+  height: 14px;
+}
+.rt-order-pin::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: rotate(45deg);
+  background: var(--pin-color, #737373);
+  border: 1.5px solid #0a0a0b;
 }

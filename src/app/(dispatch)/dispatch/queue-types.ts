@@ -6,6 +6,8 @@ export interface QueueOrder {
   reference: string | null;
   status: Enums<"order_status">;
   dropoff_address: string;
+  dropoff_lat: number | null;
+  dropoff_lng: number | null;
   cod_amount: number | null;
   created_at: string;
   customers: { name: string; phone: string } | null;

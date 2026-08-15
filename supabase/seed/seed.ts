@@ -33,10 +33,12 @@ const RIDERS = [
   { email: "rider.tunde@demo.relaytrack.dev", name: "Tunde Adeyemi", phone: "+2348012340001" },
   { email: "rider.chika@demo.relaytrack.dev", name: "Chika Obi", phone: "+2348012340002" },
 ];
+// Coordinates included so the demo orders pin on the Phase 4 dispatch map.
+// Real orders get coords from geocoding (Phase 5, alongside ETA).
 const CUSTOMERS = [
-  { name: "Mrs. Balogun", phone: "+2348098765001", default_address: "12 Adeola Odeku St, Victoria Island, Lagos" },
-  { name: "Emeka Electronics", phone: "+2348098765002", default_address: "45 Awolowo Rd, Ikoyi, Lagos" },
-  { name: "Fatima Yusuf", phone: "+2348098765003", default_address: "3 Allen Ave, Ikeja, Lagos" },
+  { name: "Mrs. Balogun", phone: "+2348098765001", default_address: "12 Adeola Odeku St, Victoria Island, Lagos", lat: 6.4281, lng: 3.4219 },
+  { name: "Emeka Electronics", phone: "+2348098765002", default_address: "45 Awolowo Rd, Ikoyi, Lagos", lat: 6.4432, lng: 3.4245 },
+  { name: "Fatima Yusuf", phone: "+2348098765003", default_address: "3 Allen Ave, Ikeja, Lagos", lat: 6.6018, lng: 3.3515 },
 ];
 
 function trackingToken(): string {
@@ -105,7 +107,7 @@ async function main(): Promise<void> {
   }
 
   const customerIds: string[] = [];
-  for (const c of CUSTOMERS) {
+  for (const { lat: _lat, lng: _lng, ...c } of CUSTOMERS) {
     const { data: customer, error } = await admin
       .from("customers")
       .insert({ org_id: org.id, ...c })
@@ -130,6 +132,8 @@ async function main(): Promise<void> {
       customer_id: customerId,
       reference: o.reference,
       dropoff_address: CUSTOMERS[o.customer]?.default_address ?? "Lagos",
+      dropoff_lat: CUSTOMERS[o.customer]?.lat ?? null,
+      dropoff_lng: CUSTOMERS[o.customer]?.lng ?? null,
       cod_amount: o.cod,
       tracking_token: trackingToken(),
     });
