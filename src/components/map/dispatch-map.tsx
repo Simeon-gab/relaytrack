@@ -248,7 +248,13 @@ export function DispatchMap({
           refresh();
         },
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        // Surface silent subscription failures — a dead channel looks identical
+        // to "no riders moving" without this.
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.error(`[dispatch-map] riders realtime ${status}`, err?.message ?? "");
+        }
+      });
     return () => {
       void supabase.removeChannel(channel);
     };
