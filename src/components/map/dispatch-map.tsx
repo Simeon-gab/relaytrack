@@ -190,10 +190,15 @@ export function DispatchMap({
       refresh();
     });
     map.on("error", (event: MapErrorEvent) => {
-      // Tile hiccups are routine; only surface a failure to render at all.
+      // Attaching any error listener silences MapLibre's own console logging,
+      // so log everything here; only SHOW the failure state when the map
+      // never managed to render at all.
+      console.error("[dispatch-map] map error:", event.error?.message ?? event.error);
       if (!mapRef.current || mapRef.current.isStyleLoaded()) return;
       setMapError(event.error?.message ?? "Map failed to load");
     });
+    // TEMP diagnostic — remove after Phase 4 map issue is resolved.
+    (window as unknown as { __map?: MapLibreMap }).__map = map;
 
     return () => {
       for (const handle of animationsRef.current.values()) cancelAnimationFrame(handle);
