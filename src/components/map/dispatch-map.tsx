@@ -197,8 +197,6 @@ export function DispatchMap({
       if (!mapRef.current || mapRef.current.isStyleLoaded()) return;
       setMapError(event.error?.message ?? "Map failed to load");
     });
-    // TEMP diagnostic — remove after Phase 4 map issue is resolved.
-    (window as unknown as { __map?: MapLibreMap }).__map = map;
 
     return () => {
       for (const handle of animationsRef.current.values()) cancelAnimationFrame(handle);
