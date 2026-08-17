@@ -49,6 +49,27 @@
 .rt-rider.rt-stale .rt-rider-label {
   color: #8b8b90;
 }
+/* Light-map variants for the customer tracking page (light default there —
+   SPEC section 4). Same marker DOM, inverted contrast. */
+.rt-light .rt-rider-dot {
+  border-color: #ffffff;
+  box-shadow: 0 1px 3px rgb(10 10 11 / 0.35);
+}
+.rt-light .rt-rider-label {
+  color: #0a0a0b;
+  text-shadow:
+    0 1px 2px #ffffff,
+    0 0 4px #ffffff;
+}
+.rt-light.rt-stale .rt-rider-label,
+.rt-light .rt-rider.rt-stale .rt-rider-label {
+  color: #737373;
+}
+.rt-light .rt-order-pin::before,
+.rt-light.rt-order-pin::before {
+  border-color: #ffffff;
+}
+
 .rt-order-pin {
   position: relative;
   width: 14px;

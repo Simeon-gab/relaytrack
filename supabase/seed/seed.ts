@@ -7,7 +7,6 @@
  * Requires .env.local with NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
  */
 import { createClient } from "@supabase/supabase-js";
-import { randomBytes } from "node:crypto";
 import type { Database } from "../../src/types/database";
 
 process.loadEnvFile(".env.local");
@@ -41,9 +40,9 @@ const CUSTOMERS = [
   { name: "Fatima Yusuf", phone: "+2348098765003", default_address: "3 Allen Ave, Ikeja, Lagos", lat: 6.6018, lng: 3.3515 },
 ];
 
-function trackingToken(): string {
-  return randomBytes(24).toString("base64url");
-}
+// Signed tokens (Phase 5): the /t/[token] page verifies the HMAC signature
+// before any DB lookup, so unsigned random tokens would 404.
+import { generateTrackingToken as trackingToken } from "../../src/lib/tracking-token";
 
 async function ensureUser(email: string, withPassword: boolean): Promise<string> {
   const { data: created, error } = await admin.auth.admin.createUser({

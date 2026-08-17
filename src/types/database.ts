@@ -574,6 +574,10 @@ export type Database = {
         Args: { p_order: string; p_rider: string }
         Returns: string
       }
+      fire_nearby: {
+        Args: { p_delivery: string }
+        Returns: boolean
+      }
       transition_order: {
         Args: {
           p_order: string

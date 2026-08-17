@@ -1,7 +1,7 @@
 import { verifyRiderToken } from "@/lib/rider/jwt";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { locationBatchSchema, INGEST_LIMITS } from "@/lib/validation/schemas";
-import { impliedSpeedKmh } from "@/lib/geo/distance";
+import { distanceMeters, impliedSpeedKmh } from "@/lib/geo/distance";
 import type { LocationPoint } from "@/types/domain";
 
 /**
@@ -56,15 +56,28 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // delivery_id is only trusted if that delivery actually belongs to this rider.
+  // The joined order fields feed the geofence check below.
   let deliveryId: string | null = null;
+  let geofence: { orderStatus: string; dropoff: { lat: number; lng: number } } | null = null;
   if (parsed.data.delivery_id) {
     const { data: delivery } = await admin
       .from("deliveries")
-      .select("id")
+      .select("id,nearby_fired_at,orders!inner(status,dropoff_lat,dropoff_lng)")
       .eq("id", parsed.data.delivery_id)
       .eq("rider_id", rider.id)
       .maybeSingle();
     deliveryId = delivery?.id ?? null;
+    if (
+      delivery &&
+      delivery.nearby_fired_at === null &&
+      delivery.orders.dropoff_lat !== null &&
+      delivery.orders.dropoff_lng !== null
+    ) {
+      geofence = {
+        orderStatus: delivery.orders.status,
+        dropoff: { lat: delivery.orders.dropoff_lat, lng: delivery.orders.dropoff_lng },
+      };
+    }
   }
 
   const now = Date.now();
@@ -132,6 +145,19 @@ export async function POST(request: Request): Promise<Response> {
           },
         })
         .eq("id", rider.id);
+
+      // Geofence "nearby" (SPEC section 2): <500m from dropoff while
+      // in_transit. fire_nearby's null-guard makes it fire exactly once even
+      // if concurrent batches race; the delivery_events trigger then queues
+      // the customer notification.
+      if (
+        deliveryId &&
+        geofence &&
+        geofence.orderStatus === "in_transit" &&
+        distanceMeters(newest, geofence.dropoff) < INGEST_LIMITS.nearbyRadiusMeters
+      ) {
+        await admin.rpc("fire_nearby", { p_delivery: deliveryId });
+      }
     }
   }
 
