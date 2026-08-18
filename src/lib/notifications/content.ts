@@ -25,7 +25,10 @@ export function buildMessageText(template: NotificationTemplate, ctx: MessageCon
     case "picked_up":
       return `${ctx.orgName}: your order ${ctx.reference} is on its way. Track it live: ${ctx.trackingUrl}`;
     case "nearby":
-      return `${ctx.orgName}: your rider is almost there — order ${ctx.reference} arriving soon. ${ctx.trackingUrl}`;
+      // Plain hyphen, never an em-dash: any character outside GSM-7 forces the
+      // whole SMS into UCS-2, cutting the segment limit from 160 to 70 and
+      // doubling the cost of a message that fires on every delivery.
+      return `${ctx.orgName}: your rider is almost there - order ${ctx.reference} arriving soon. ${ctx.trackingUrl}`;
     case "delivered":
       return `${ctx.orgName}: order ${ctx.reference} has been delivered. Delivery details: ${ctx.trackingUrl}`;
   }

@@ -168,6 +168,28 @@ describe("notification fallback rules (unit)", () => {
     expect(last.enqueueSmsFallback).toBe(false);
   });
 
+  it("every SMS stays in the GSM-7 alphabet and fits one 160-char segment", () => {
+    // Any character outside GSM-7 (em-dash, smart quotes, naira sign) forces
+    // the whole message into UCS-2: the segment limit drops 160 -> 70 and the
+    // send costs multiple segments. These fire on every delivery, so a stray
+    // punctuation character is a real recurring cost, not a cosmetic issue.
+    const GSM =
+      "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡" +
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+    const realistic: MessageContext = {
+      orgName: "Hungkee",
+      reference: "HK-1042",
+      // Longest realistic link: full signed token on the deployed domain.
+      trackingUrl: "https://relaytrack.vercel.app/t/kG9Wu65X5NJ9iE5R.5IxUQfHnZ-aGcv3rbdMN8M",
+    };
+    for (const template of ["assigned", "picked_up", "nearby", "delivered"] as const) {
+      const text = buildMessageText(template, realistic);
+      const offending = [...text].filter((ch) => !GSM.includes(ch));
+      expect(offending, `${template} has non-GSM-7 chars: ${offending.join(" ")}`).toEqual([]);
+      expect(text.length, `${template} spills into a second SMS segment`).toBeLessThanOrEqual(160);
+    }
+  });
+
   it("every template's text carries org, reference and tracking link", () => {
     for (const template of ["assigned", "picked_up", "nearby", "delivered"] as const) {
       const text = buildMessageText(template, msgCtx);
