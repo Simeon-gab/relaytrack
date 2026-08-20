@@ -9,7 +9,18 @@ import { requireEnv } from "@/lib/env";
  * against deliveries.delivered_at at read time (Phase 5), not in the token.
  */
 
-const SIG_LENGTH = 22; // base64url chars (~16 bytes) — plenty against forgery
+/**
+ * Token length is an SMS cost decision, not just a security one. Every
+ * notification carries this link, and one character over 160 doubles the
+ * price of that message forever (Phase 5). Sized for both:
+ *   id  = 8 random bytes  -> 11 base64url chars (64 bits, unguessable)
+ *   sig = 12 base64url chars (72 bits of HMAC-SHA256, truncated)
+ * 24 chars total. Forging a token means beating 2^72; enumerating one means
+ * beating 2^64 — both far beyond a link whose worst case is showing a
+ * stranger one delivery's public status.
+ */
+const ID_BYTES = 8;
+const SIG_LENGTH = 12;
 
 function sign(id: string): string {
   return createHmac("sha256", requireEnv("TRACKING_TOKEN_SECRET"))
@@ -19,7 +30,7 @@ function sign(id: string): string {
 }
 
 export function generateTrackingToken(): string {
-  const id = randomBytes(12).toString("base64url");
+  const id = randomBytes(ID_BYTES).toString("base64url");
   return `${id}.${sign(id)}`;
 }
 

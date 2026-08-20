@@ -27,7 +27,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   }
 
   const admin = createAdminClient();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  // Fail loudly rather than mailing customers a link to localhost. Server-only
+  // (never NEXT_PUBLIC_): keeping it unprefixed makes it a runtime value, so
+  // changing the domain does not require a rebuild.
+  const appUrl = requireEnv("APP_URL");
 
   const { data: rows, error } = await admin
     .from("notifications")
@@ -60,7 +63,10 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
 
     const ctx: MessageContext = {
-      orgName: row.orders?.orgs?.name ?? "Your order",
+      // Empty, not a placeholder: the message reads correctly without a name
+      // ("your order HK-1042"), whereas a stand-in renders as "your Your order
+      // order HK-1042". The "Powered by" sign-off still identifies the sender.
+      orgName: row.orders?.orgs?.name ?? "",
       reference: row.orders?.reference ?? "",
       trackingUrl: `${appUrl}/t/${row.orders?.tracking_token ?? ""}`,
     };

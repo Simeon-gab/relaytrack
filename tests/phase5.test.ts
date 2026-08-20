@@ -131,6 +131,9 @@ describe("notification fallback rules (unit)", () => {
   };
   const okSend = async () => ({ ok: true, response: { id: "msg-1" } });
   const failSend = async () => ({ ok: false, response: { error: "provider down" } });
+  const GSM =
+    "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡" +
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
 
   it("whatsapp success -> sent, no fallback", async () => {
     const out = await processNotification(
@@ -173,14 +176,13 @@ describe("notification fallback rules (unit)", () => {
     // the whole message into UCS-2: the segment limit drops 160 -> 70 and the
     // send costs multiple segments. These fire on every delivery, so a stray
     // punctuation character is a real recurring cost, not a cosmetic issue.
-    const GSM =
-      "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡" +
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+    // Worst realistic case, not the friendliest one: a long org name plus a
+    // full-length token on the deployed domain. Sizing against "Hungkee"
+    // would pass today and bill double for the first client with a long name.
     const realistic: MessageContext = {
-      orgName: "Hungkee",
+      orgName: "Adeyemi Pharmaceuticals",
       reference: "HK-1042",
-      // Longest realistic link: full signed token on the deployed domain.
-      trackingUrl: "https://relaytrack.vercel.app/t/kG9Wu65X5NJ9iE5R.5IxUQfHnZ-aGcv3rbdMN8M",
+      trackingUrl: `https://relaytrack.vercel.app/t/${generateTrackingToken()}`,
     };
     for (const template of ["assigned", "picked_up", "nearby", "delivered"] as const) {
       const text = buildMessageText(template, realistic);
@@ -190,12 +192,60 @@ describe("notification fallback rules (unit)", () => {
     }
   });
 
+  it("trims the org name, never the reference or the link, to hold one segment", () => {
+    // The guard has to be structural. Sizing only against the org we happened
+    // to pick passes today and bills double for the first client with a long
+    // name — so this is a name no budget could fit whole.
+    const trackingUrl = `https://relaytrack.vercel.app/t/${generateTrackingToken()}`;
+    const reference = "ORD-2026-000142";
+    const orgName = "Adebayo Pharmaceuticals & Stores Limited";
+    for (const template of (["assigned", "picked_up", "nearby", "delivered"] as const)) {
+      const text = buildMessageText(template, { orgName, reference, trackingUrl });
+      expect(text.length, `${template} spills into a second SMS segment`).toBeLessThanOrEqual(160);
+      // A truncated reference is a support ticket and a truncated link is a
+      // dead link. Only the name may be cut.
+      expect(text).toContain(reference);
+      expect(text).toContain(trackingUrl);
+      expect(text.endsWith("Powered by RelayTrack.")).toBe(true);
+    }
+  });
+
+  it("renders a trimmed org name identically across all four messages", () => {
+    // A name that changes between "assigned" and "delivered" reads as a bug
+    // to the customer, so the trim is sized against the longest status line.
+    const ctx: MessageContext = {
+      orgName: "Adebayo Pharmaceuticals & Stores Limited",
+      reference: "ORD-2026-000142",
+      trackingUrl: `https://relaytrack.vercel.app/t/${generateTrackingToken()}`,
+    };
+    const rendered = (["assigned", "picked_up", "nearby", "delivered"] as const).map((t) => buildMessageText(t, ctx).split(" order ")[0]);
+    expect(new Set(rendered).size, `org name differs across templates: ${rendered.join(" | ")}`).toBe(1);
+  });
+
+  it("forces org name and reference into GSM-7", () => {
+    // Both are free text typed by the org — nothing upstream constrains the
+    // charset, and a single naira sign would drop the limit to 70 and put
+    // every notification for that org at three segments.
+    const text = buildMessageText("delivered", {
+      orgName: "Adé’s Stores — ₦aira",
+      reference: "HK–1042",
+      trackingUrl: "https://x/t/abc",
+    });
+    const offending = [...text].filter((ch) => !GSM.includes(ch));
+    expect(offending, `non-GSM-7 chars survived: ${offending.join(" ")}`).toEqual([]);
+    expect(text).toContain("Adé's Stores - NGNaira");
+    expect(text).toContain("HK-1042");
+  });
+
   it("every template's text carries org, reference and tracking link", () => {
     for (const template of ["assigned", "picked_up", "nearby", "delivered"] as const) {
       const text = buildMessageText(template, msgCtx);
       expect(text).toContain("Hungkee");
       expect(text).toContain("HK-1");
       expect(text).toContain("https://x/t/abc");
+      // Termii's default sender ID is shared, so the body must identify the
+      // sender. Approval depends on this sign-off being present.
+      expect(text.endsWith("Powered by RelayTrack.")).toBe(true);
     }
   });
 });
